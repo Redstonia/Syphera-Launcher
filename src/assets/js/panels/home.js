@@ -1,0 +1,396 @@
+/**
+ * @license CC-BY-NC 4.0 - https://creativecommons.org/licenses/by-nc/4.0/
+ */
+
+'use strict';
+
+import { logger, database, changePanel, t } from '../utils.js';
+const { Launch, Status } = require('minecraft-java-core-azbetter');
+const { ipcRenderer, shell } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const launch = new Launch();
+const pkg = require('../package.json');
+const settings_url = pkg.user ? `${pkg.settings}/${pkg.user}` : pkg.settings;
+
+const dataDirectory = process.env.APPDATA || (process.platform == 'darwin' ? `${process.env.HOME}/Library/Application Support` : process.env.HOME);
+const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+class Home {
+    static id = "home";
+
+    async init(config, news) {
+        this.database = await new database().init();
+        this.config = config;
+        this.news = await news;
+
+        this.setStaticTexts();
+        this.initNews();
+        this.initLaunch();
+        this.initStatusServer();
+        this.initBtn();
+        this.initVideo();
+        this.initAdvert();
+        this.verifyModsBeforeLaunch();
+    }
+
+    async setStaticTexts() {
+        document.getElementById('text-download').textContent = t('verification');
+        document.getElementById('server-name').textContent = t('offline');
+        document.getElementById('server-desc').innerHTML = `<span class="red">${t('closed')}</span>`;
+        document.getElementById('video-title').textContent = t('community_video');
+        document.getElementById('play-video-btn').innerHTML = '&#9658;';
+        document.getElementById('view-video-btn').textContent = t('view_video');
+    }
+
+    async initNews() {
+        if(this.news === null) {
+            const newsContainer = document.querySelector('.news-c');
+            const blockNews = document.createElement('div');
+            blockNews.innerHTML = `
+                <div class="no-news">Aucune actualité pour le moment.</div>`
+            newsContainer.appendChild(blockNews);
+        } else {
+            var createdNews = 0;
+            for(const newsItem of this.news) {
+                if(createdNews < 4) {
+                    const date = await this.getDate(newsItem.publish_date);
+                    this.createNewsBlock(newsItem.title, date, newsItem.link, newsItem.image);
+                    createdNews = createdNews + 1;
+                }
+            }
+        }
+        this.setServerIcon();
+    }
+
+    createNewsBlock(title, date = {}, link, image) {
+        const newsContainer = document.querySelector('.news-c');
+
+        const blockNews = document.createElement('div');
+        blockNews.classList.add('news-block');
+        
+        if(image !== null) {
+            blockNews.style.backgroundImage = `url('${image}')`;
+        }
+        blockNews.innerHTML = `
+            <div class="news-details">${title}</div>
+            ${date.day ? `<div class="date"><div class="day">${date.day}</div><div class="month">${date.month}</div></div>` : ''}`
+
+        blockNews.addEventListener('click', (e) => {
+            shell.openExternal(link);
+        })
+        newsContainer.appendChild(blockNews);
+    }
+
+    setServerIcon() {
+        const serverImg = document.querySelector('.server-img');
+        serverImg.setAttribute("src", this.config.server_icon);
+        if (!this.config.server_icon) {
+            serverImg.style.display = "none";
+        }
+    }
+
+    async initLaunch() {
+        document.querySelector('.play-btn').addEventListener('click', async () => {
+            this.processLaunchBtnClick();
+        });
+        document.querySelector('.mini-play-btn').addEventListener('click', async () => {
+            this.processLaunchBtnClick();
+        })
+    }
+
+    async processLaunchBtnClick() {
+        await this.verifyModsBeforeLaunch();
+        const opts = await this.getLaunchOptions();
+        const info = document.querySelector(".text-download");
+        const progressBar = document.querySelector(".progress-bar");
+        const playBtn = document.querySelector('.play-btn');
+
+        this.changePlayBtnStatus("Vérification en cours...")
+        info.style.display = "block";
+        launch.Launch(opts);
+
+        const launcherSettings = (await this.database.get('1234', 'launcher')).value;
+        this.setupLaunchListeners(launch, info, progressBar, playBtn, launcherSettings);
+    }
+
+    async getLaunchOptions() {
+        const urlpkg = this.getBaseUrl();
+        const uuid = (await this.database.get('1234', 'accounts-selected')).value;
+        const account = (await this.database.get(uuid.selected, 'accounts')).value;
+        const ram = (await this.database.get('1234', 'ram')).value;
+        const launcherSettings = (await this.database.get('1234', 'launcher')).value;
+
+        const authentificationToken = account.access_token;
+        const accountUuid = account.uuid;
+        const accountName = account.name;
+
+        return {
+            url: urlpkg,
+            authenticator: account,
+            timeout: 10000,
+            path: `${dataDirectory}/${process.platform == 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`}`,
+            version: this.config.game_version,
+            detached: launcherSettings.launcher.close === 'close-all' ? false : true,
+            downloadFileMultiple: 30,
+            loader: {
+                type: this.config.loader.type,
+                build: this.config.loader.build,
+                enable: this.config.loader.enable,
+            },
+            verify: this.config.verify,
+            ignored: [
+                ...(Array.isArray(this.config.ignored) ? this.config.ignored : Object.values(this.config.ignored)),
+                "launcher_config",
+            ],
+            
+            java: this.config.java,
+            memory: {
+                min: `${ram.ramMin * 1024}M`,
+                max: `${ram.ramMax * 1024}M`
+            },
+            GAME_ARGS: [`--authentification=${authentificationToken}`, `--suuid=${accountUuid}`, `--uname=${accountName}`]
+        };
+    }
+
+    getBaseUrl() {
+        const baseUrl = settings_url.endsWith('/') ? settings_url : `${settings_url}/`;
+        return pkg.env === 'azuriom' ? `${baseUrl}api/centralcorp/files` : `${baseUrl}data/`;
+    }
+
+    setupLaunchListeners(launch, info, progressBar, playBtn, launcherSettings) {
+        launch.on('progress', (progress, size) => {
+            this.updateProgressBar(progressBar, info, progress, size, t('download')), 
+            this.changePlayBtnStatus("Téléchargement en cours...");
+        });
+        launch.on('check', (progress, size) => {
+            this.updateProgressBar(progressBar, info, progress, size, t('verification')), 
+            this.changePlayBtnStatus(`Vérification en cours...`)
+        });
+        launch.on('patch', patch => {
+            info.innerHTML = t('patch_in_progress');
+            this.changePlayBtnStatus("Application du patch...");
+        });
+        launch.on('extract', extract => {
+            console.log(extract);
+            this.changePlayBtnStatus("Extraction en cours...");
+        });
+        launch.on('estimated', time => console.log(this.formatTime(time)));
+        launch.on('speed', speed => {
+            const download = document.querySelector('.download-speed');
+            download.style.display = "block";
+            download.innerHTML = `${(speed / 1067008).toFixed(2)} Mb/s`;
+            console.log(`${(speed / 1067008).toFixed(2)} Mb/s`)
+        });
+        launch.on('data', e => this.handleLaunchData(e, info, progressBar, playBtn, launcherSettings));
+        launch.on('close', code => this.handleLaunchClose(code, info, progressBar, playBtn, launcherSettings));
+        launch.on('error', err => console.log(err));
+    }
+
+    changePlayBtnStatus(status) {
+        const playBtn = document.querySelector('.play-btn');
+        playBtn.innerHTML = `<span class="spinner"></span>${status}`;
+        playBtn.disabled = true;
+        document.querySelector('.mini-play-btn').disabled = true;
+    }
+
+    updateProgressBar(progressBar, info, progress, size, text) {
+        progressBar.style.display = "block";
+        info.innerHTML = `${text} ${((progress / size) * 100).toFixed(0)}%`;
+        ipcRenderer.send('main-window-progress', { progress, size });
+        progressBar.value = progress;
+        progressBar.max = size;
+    }
+
+    formatTime(time) {
+        const hours = Math.floor(time / 3600);
+        const minutes = Math.floor((time - hours * 3600) / 60);
+        const seconds = Math.floor(time - hours * 3600 - minutes * 60);
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    handleLaunchData(e, info, progressBar, playBtn, launcherSettings) {
+        new logger('Minecraft', '#36b030');
+        if (launcherSettings.launcher.close === 'close-launcher') ipcRenderer.send("main-window-hide");
+        ipcRenderer.send('main-window-progress-reset');
+        progressBar.style.display = "none";
+        playBtn.innerHTML = `Jeu lancé <i class="bi bi-check"></i>`;
+        info.style.display = 'none';
+
+        const download = document.querySelector('.download-speed');
+        download.style.display = "none";
+        console.log(e);
+    }
+
+    handleLaunchClose(code, info, progressBar, playBtn, launcherSettings) {
+        if (launcherSettings.launcher.close === 'close-launcher') ipcRenderer.send("main-window-show");
+        progressBar.style.display = "none";
+        info.style.display = "none";
+        info.innerHTML = t('verification');
+
+        playBtn.innerHTML = `<i class="bi bi-play-circle"></i> Lancer le jeu`;
+        playBtn.disabled = false;
+
+        document.querySelector('.mini-play-btn').disabled = false;
+
+        new logger('Launcher', '#7289da');
+        console.log('Close');
+    }
+
+    async initStatusServer() {
+        const nameServer = document.querySelector('.server-text .name');
+        const serverMs = document.querySelector('.server-text .desc');
+        const playersConnected = document.querySelector('.etat-text .text');
+        const online = document.querySelector(".etat-text .online");
+
+        const serverPing = await new Status(this.config.status.ip, this.config.status.port).getStatus();
+
+        if (!serverPing.error) {
+            nameServer.textContent = this.config.status.nameServer;
+            serverMs.innerHTML = `<span class="green">${t('server_online')}</span> - ${serverPing.ms}${t('server_ping')}`;
+            online.classList.toggle("off");
+            playersConnected.textContent = serverPing.playersConnect;
+        } else {
+            nameServer.textContent = t('server_unavailable');
+            serverMs.innerHTML = `<span class="red">${t('server_closed')}</span>`;
+        }
+    }
+
+    async initVideo() {
+        const videoContainer = document.querySelector('.ytb');
+        if (!this.config.video_activate) {
+            videoContainer.style.display = 'none';
+            return;
+        }
+
+        const youtubeVideoId = this.config.video_url;
+        const videoType = this.config.video_type;
+        let youtubeEmbedUrl;
+
+        if (videoType === 'short') {
+            youtubeEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&playsinline=1`;
+        } else if (videoType === 'video') {
+            youtubeEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1`;
+        } else {
+            console.error('Invalid video type specified in the configuration.');
+            return;
+        }
+
+        const youtubeThumbnailUrl = `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`;
+        const videoThumbnail = videoContainer.querySelector('.youtube-thumbnail');
+        const thumbnailImg = videoThumbnail.querySelector('.thumbnail-img');
+        const playButton = videoThumbnail.querySelector('.ytb-play-btn');
+        const btn = videoContainer.querySelector('.ytb-btn');
+
+        btn.addEventListener('click', () => shell.openExternal(`https://youtube.com/watch?v=${youtubeVideoId}`));
+
+        if (thumbnailImg && playButton) {
+            thumbnailImg.src = youtubeThumbnailUrl;
+            videoThumbnail.addEventListener('click', () => {
+                videoThumbnail.innerHTML = `<iframe width="500" height="290" src="${youtubeEmbedUrl}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+            });
+        }
+    }
+
+    async initAdvert() {
+        const advertBanner = document.querySelector('.advert-banner');
+        if (this.config.alert_activate) {
+            const message = this.config.alert_msg;
+            const firstParagraph = message.split('</p>')[0] + '</p>';
+            const scrollingText = document.createElement('div');
+            scrollingText.classList.add('scrolling-text');
+            scrollingText.innerHTML = `${firstParagraph}`;
+            advertBanner.innerHTML = '';
+            advertBanner.appendChild(scrollingText);
+            scrollingText.classList.toggle('no-scroll', !this.config.alert_scroll);
+            advertBanner.style.display = 'block';
+        } else {
+            advertBanner.style.display = 'none';
+        }
+    }
+
+    initBtn() {
+        document.querySelector('.settings-btn').addEventListener('click', () => {
+            changePanel('settings');
+        });
+    }
+
+    async getDate(e) {
+        const date = new Date(e);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const day = date.getDate();
+        const months = [
+            t('january'), t('february'), t('march'), t('april'), t('may'), t('june'),
+            t('july'), t('august'), t('september'), t('october'), t('november'), t('december')
+        ];
+        return { year, month: months[month], day };
+    }
+
+    async verifyModsBeforeLaunch() {
+        const playButton = document.querySelector('.play-btn');
+        playButton.addEventListener('click', async () => {
+            const modsDir = path.join(dataDirectory, process.platform == 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`, 'mods');
+            const launcherConfigDir = path.join(dataDirectory, process.platform == 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`, 'launcher_config');
+            const modsConfigFile = path.join(launcherConfigDir, 'mods_config.json');
+
+            let modsConfig;
+            try {
+                modsConfig = JSON.parse(fs.readFileSync(modsConfigFile));
+            } catch (error) {
+                console.error("Failed to read mods config file:", error);
+                return;
+            }
+
+            for (const mod in modsConfig) {
+                const modFiles = fs.readdirSync(modsDir).filter(file => file.startsWith(mod) && (file.endsWith('.jar') || file.endsWith('.jar-disable')));
+                if (modFiles.length > 0) {
+                    const modFile = modFiles[0];
+                    const modFilePath = path.join(modsDir, modFile);
+                    const newModFilePath = modsConfig[mod] ? modFilePath.replace('.jar-disable', '.jar') : modFilePath.endsWith('.jar-disable') ? modFilePath : `${modFilePath}.disable`;
+                    if (modFilePath !== newModFilePath) {
+                        fs.renameSync(modFilePath, newModFilePath);
+                    }
+                }
+            }
+        });
+    }
+
+    displayEmptyModsMessage(modsListElement) {
+        const modElement = document.createElement('div');
+        modElement.innerHTML = `
+            <div class="mods-container-empty">
+              <h2>${t('optional_mods_not_downloaded')}</h2>
+            </div>`;
+        modsListElement.appendChild(modElement);
+    }
+
+    updateRole(account) {
+        if (this.config.role && account.user_info.role) {
+            const blockRole = document.createElement("div");
+            blockRole.innerHTML = `<div>${t('grade')}: ${account.user_info.role.name}</div>`;
+            document.querySelector('.player-role').appendChild(blockRole);
+        } else {
+            document.querySelector(".player-role").style.display = "none";
+        }
+    }
+
+    updateWhitelist(account) {
+        const playBtn = document.querySelector(".play-btn");
+        if (this.config.whitelist_activate && 
+            (!this.config.whitelist.includes(account.name) &&
+             !this.config.whitelist_roles.includes(account.user_info.role.name))) {
+            playBtn.style.backgroundColor = "#696969";
+            playBtn.style.pointerEvents = "none";
+            playBtn.style.boxShadow = "none";
+            playBtn.textContent = t('unavailable');
+        } else {
+            playBtn.style.backgroundColor = "#00bd7a";
+            playBtn.style.pointerEvents = "auto";
+            playBtn.style.boxShadow = "2px 2px 5px rgba(0, 0, 0, 0.3)";
+            playBtn.textContent = t('play');
+        }
+    }
+}
+
+export default Home;

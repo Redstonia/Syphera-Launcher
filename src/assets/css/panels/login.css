@@ -1,0 +1,318 @@
+.login-card {
+    position: relative;
+    width: 40%;
+    height: 100%;
+    background: #121212;
+    padding: 20px;
+    font: normal normal bold 19px/29px Poppins;
+    color: #E1E1E1;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;   
+    height: 100vh; 
+    opacity: 0.95;
+}
+
+.img {
+    width: 65%;
+    height: 40%;
+}
+
+.login-type {
+    display: grid;
+    padding: 0 7%;
+}
+
+.login-type-btn {
+    border-radius: 15px;
+    border: none;
+    margin: 2% 0;
+    height: 2em;
+    background: linear-gradient(135deg, #248fc0, #122974);
+    box-shadow: 0 0 5px #12539c;
+    color: #121212;
+    font: normal normal bold 19px/29px Poppins;
+    cursor: pointer;
+}
+
+.login-type-btn:hover {
+    background: linear-gradient(135deg, #1979a5, #081e69);
+    box-shadow: 0 0 5px #12539c;
+}
+
+.cancel-login {
+    border-radius: 15px;
+    border: none;
+    margin: 2% 0;
+    height: 2em;
+    background: linear-gradient(135deg, #c50c0c, #700f02);
+    box-shadow: 0 0 5px #a81603;
+    color: #121212;
+    font: normal normal bold 19px/29px Poppins;
+    cursor: pointer;
+    display: none;
+}
+
+.error-content {
+    position: absolute;
+    right: 3%;
+    top: 5%;
+    padding: 15px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, #c50c0c, #700f02);
+    color: #FFFFFF;
+    font: normal normal bold 15px/20px Poppins;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: center;
+
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+
+    transition: all 0.5s ease;
+}
+
+.error-content.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.cancel-login:hover {
+    background: linear-gradient(135deg, #d40e0e, #690808);
+    box-shadow: 0 0 5px #aa0808;
+}
+
+.microsoft {
+    display: none;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+.card-body {
+    margin: 10%;
+}
+
+.login-card-mojang-input {
+    text-align: center;
+    display: grid;
+    position: relative;
+}
+
+.login-card-mojang-input i {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-125%) translateX(-30%);
+    color: #aaa;
+    pointer-events: none;
+}
+
+.a2f-login-card-mojang-input {
+    text-align: center;
+    display: grid;
+    position: relative;
+}
+
+.a2f-login-card-mojang-input i {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-60%) translateX(-50%);
+    color: #aaa;
+    pointer-events: none;
+}
+
+.a2f-login-card-mojang-input input {
+    padding-left: 3em;
+    border-radius: 30px;
+    background-color: #373737;
+    color: white;
+    border: none;
+}
+
+.a2f-login-mojang-input::placeholder {
+    color: white;
+}
+
+.login-card-mojang-input input {
+    padding-left: 3em;
+    border-radius: 30px;
+    background-color: #373737;
+    color: white;
+    border: none;
+}
+
+.login-mojang-input::placeholder {
+    color: white;
+}
+
+.login-mojang-input {
+    font-family: 'Poppins';
+    display: flex;
+    letter-spacing: 2px;
+    color: #fff;
+    border: solid 3px #272727;
+    border-radius: 5px;
+    background-color: #373737;
+    padding: 0.80rem 0.75rem;
+}
+
+.loginDisclaimerText {
+    text-align: center;
+    font-size: 0.5em;
+}
+
+.btn-option-login {
+    width: 100%;
+    display: grid;
+    text-align: center;
+}
+
+.login-options {
+    display: flex;
+    flex-direction: column;  
+    align-items: flex-start;
+    transform: translateY(-10%);
+}
+
+.info-login {
+    color: #9c9c9c;
+    font-size: 15px;
+    margin-left: 15px;
+}
+
+.info-login-2fa {
+    color: #9c9c9c;
+}
+
+.login-btn {
+    border-radius: 15px;
+    border: none;
+    margin: 2% 0;
+    height: 2em;
+    background: linear-gradient(135deg, #248fc0, #122974);
+    box-shadow: 0 0 5px #12539c;
+    color: #121212;
+    font: normal normal bold 19px/29px Poppins;
+    cursor: pointer;
+}
+
+.login-btn:hover {
+    background: linear-gradient(135deg, #1979a5, #081e69);
+    box-shadow: 0 0 5px #12539c;
+}
+
+.cancel {
+    border: none;
+    background-color: #ffffff00;
+    color: #F1F1F1;
+    font: normal normal bold 19px/29px Poppins;
+    cursor: pointer;
+}
+
+.cancel:hover {
+    color: #373737;
+}
+
+.cancel:hover:disabled {
+    color: #F1F1F1;
+    cursor: default;
+}
+
+.password-reset {
+    font-size: 13px;
+    cursor: pointer;
+    color: #fff;
+    text-decoration: none;
+}
+
+.password-reset:hover {
+    font-size: 15px;
+    color: #ccc9c9;
+}
+
+.new-user {
+    font-size: 13px;
+    cursor: pointer;
+    color: #fff;
+    text-decoration: none;
+}
+
+.new-user:hover {
+    font-size: 15px;
+    color: #ccc9c9;
+}
+
+.login-btn-2f {
+    border-radius: 15px;
+    border: none;
+    margin: 2% 0;
+    height: 2em;
+    background: linear-gradient(135deg, #248fc0, #122974);
+    box-shadow: 0 0 5px #12539c;
+    color: #121212;
+    font: normal normal bold 19px/29px Poppins;
+    cursor: pointer;
+}
+
+.a2f-card {
+    position: relative;
+    width: 40%;
+    height: 100%;
+    background: #121212;
+    padding: 20px;
+    font: normal normal bold 19px/29px Poppins;
+    color: #E1E1E1;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;   
+    height: 100vh; 
+    opacity: 0.95;
+}
+
+.cancel-2f {
+    border: none;
+    background-color: #ffffff00;
+    color: #F1F1F1;
+    font: normal normal bold 19px/29px Poppins;
+    cursor: pointer;
+}
+
+.cancel-2f:hover {
+    color: #373737;
+}
+
+.email-verify-card {
+    position: absolute;
+    top: 52%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 35%;
+    background: #121212;
+    padding: 20px;
+    font: normal normal bold 19px/29px Poppins;
+    color: #E1E1E1;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.cancel-email {
+    border: none;
+    background-color: #ffffff00;
+    color: #F1F1F1;
+    font: normal normal bold 19px/29px Poppins;
+    cursor: pointer;
+}
+
+.cancel-email:hover {
+    color: #373737;
+} 

@@ -1,0 +1,42 @@
+name: Publish Release
+
+on:
+  release:
+    types: [released] 
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔹 Installer GitHub CLI
+        run: sudo apt-get install gh
+
+      - name: 🔹 Télécharger les fichiers de la release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir release_files
+          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --dir release_files
+          
+          rm -f release_files/*.tar.gz release_files/*.zip
+          find release_files -type f ! \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.yml" \) -delete
+
+      - name: 🔹 Cloner le repo public
+        env:
+          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          git clone https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/SypheraMc/Syphera-Launcher.git public_repo
+          cd public_repo
+          git checkout main
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+
+      - name: 🔹 Créer une Release dans le repo public
+        env:
+           GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+           cd public_repo
+           gh release create ${{ github.event.release.tag_name }} ../release_files/* \
+           --title "Release ${{ github.event.release.tag_name }}" \
+           --notes "${{ github.event.release.body }}"

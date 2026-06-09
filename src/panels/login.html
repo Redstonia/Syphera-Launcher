@@ -1,0 +1,57 @@
+<div class="login-content">
+    <div class="error-content">
+        <p>Erreur :</p>
+        <div class="info-login" id="info-login"></div>
+        <div class="info-login-2f" id="info-login-2f"></div>
+    </div>
+    <div class="login-card">
+        <div class="card-body">
+            <img src="assets/images/icon.png" alt="logo" class="img">
+            <h2>Bienvenue parmis nous !</h2>
+            <p id="login-title"></p>
+            <div class="login-card-mojang-input">
+                <i class="bi bi-person-fill"></i>
+                <input type="text" class="Mail login-mojang-input" spellcheck="false" placeholder="Nom d'utilisateur/Adresse email">
+                <small class="error-mail">&nbsp;</small>
+            </div>
+
+            <div class="login-card-mojang-input">
+                <i class="bi bi-lock-fill"></i>
+                <input type="password" class="Password login-mojang-input" spellcheck="false" placeholder="Mot de passe">
+                <small class="error-password">&nbsp;</small>
+            </div>
+
+            <div class="login-options">
+                <a class="password-reset" id="password-reset-link" target="_blank">Mot de passe oublié ?</a>
+                <a class="new-user" id="new-user-link" target="_blank">Pas encore de compte ?</a>
+                <div class="btn-option-login">
+                    <button class="login-btn" id="login-btn"></button>
+                    <button class="cancel-login" id="cancel-login">Annuler la connexion</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="a2f-card" style="display: none;">
+        <div class="card-body">
+            <img src="assets/images/icon.png" alt="logo" class="img">
+            <div class="label-2f">
+                <p id="a2f-label"></p>
+            </div>
+            <div class="a2f-login-card-mojang-input">
+                <i class="bi bi-phone"></i>
+                <input type="text" class="a2f login-mojang-input" spellcheck="false" placeholder="Code A2F">
+            </div>
+            <div class="btn-option-login">
+                <button class="login-btn-2f" id="a2f-login-btn"></button>
+                <button class="cancel cancel-2f" id="cancel-a2f-btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="email-verify-card" style="display: none;">
+        <div class="info-login-email" id="info-login-email"></div>
+        <p id="email-verify-label"></p>
+        <button class="cancel cancel-email" id="cancel-email-btn"></button>
+    </div>
+</div>
